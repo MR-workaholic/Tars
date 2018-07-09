@@ -424,8 +424,7 @@ _prx->tars_set_protocol(prot);
    ```
    The requestId parameter needs to be unique within the object, and a unique id in the object can be obtained through the `uint32_t tars_gen_requestid()` interface of the proxy. sFuncName is mainly used for statistical analysis of interface calls to the framework layer. It can be "" by default. Buff is the content to be sent, and len is the length of the buff. Rsp is the ResponsePacket package obtained for this call.
 
-    - Asynchronous method: access the service by calling the proxy rpc_call_asyc method
-    
+    - Asynchronous method: access the service by calling the proxy rpc_call_asyc method    
       ```
 			virtual void rpc_call_async(uint32_t requestId, const string& sFuncName, const char* buff, uint32_t len,  const ServantProxyCallbackPtr& callback);
       ```
