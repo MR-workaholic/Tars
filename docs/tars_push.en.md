@@ -429,15 +429,15 @@ _prx->tars_set_protocol(prot);
       ```
 			virtual void rpc_call_async(uint32_t requestId, const string& sFuncName, const char* buff, uint32_t len,  const ServantProxyCallbackPtr& callback);
       ```
-      其中参数requestId需要在一个object内唯一，可以通过proxy的 uint32_t tars_gen_requestid()接口获得一个该object内唯一的id。sFuncName为回调对象响应后调用的函数名。buff为要发送的内容，len为buff的长度。callback则为本次调用返回结果后，即服务端返回处理结果后，此回调对象会被响应。
+      The requestId parameter needs to be unique within the object, and a unique id in the object can be obtained through the `uint32_t tars_gen_requestid()` interface of the proxy. sFuncName is the name of the function called after the response object responds. Buff is the content to be sent, and len is the length of the buff. Callback is the callback object that is responded to after this call returns the result (that is, after the server returns the processing result).
 
-- 设置接受服务端的push消息方法：
+- Set the push message method to accept the server:
 ```
 TestPushCallBackPtr cbPush = new TestPushCallBack();
 _prx->tars_set_push_callback(cbPush);
  ``` 
   
-### 客户端具体实现
+### Client-implemented code
 
 main.cpp
 ```cpp
@@ -512,7 +512,7 @@ TestRecvThread.cpp
 #include <arpa/inet.h>
 
 /*
- 响应包解码函数，根据特定格式解码从服务端收到的数据，解析为ResponsePacket
+ Response packet decoding function: Decode data received from the server according to a specific format, and parse it into ResponsePacket
 */
 static size_t pushResponse(const char* recvBuffer, size_t length, list<ResponsePacket>& done)
 {
@@ -527,13 +527,13 @@ static size_t pushResponse(const char* recvBuffer, size_t length, list<ResponseP
 
         unsigned int iHeaderLen = ntohl(*(unsigned int*)(recvBuffer + pos));
 
-        //做一下保护,长度大于M
+        //Do a length protection: the length cannot be greater than M or less than sizeof (unsigned int)
         if (iHeaderLen > 100000 || iHeaderLen < sizeof(unsigned int))
         {
             throw TarsDecodeException("packet length too long or too short,len:" + TC_Common::tostr(iHeaderLen));
         }
 
-        //包没有接收全
+        //Did not receive the complete packet
         if (len < iHeaderLen)
         {
             break;
@@ -554,8 +554,8 @@ static size_t pushResponse(const char* recvBuffer, size_t length, list<ResponseP
     return pos;
 }
 /*
-   请求包编码函数，本函数的打包格式为
-   整个包长度（字节）+iRequestId（字节）+包内容
+   Request packet encoding function
+   The packing format of this function: the entire packet length (bytes) + iRequestId (bytes) + package contents
 */
 static void pushRequest(const RequestPacket& request, string& buff)
 {
@@ -673,9 +673,9 @@ void RecvThread::run(void)
 ```
 
 
-## 客户端测试结果
+## Client test results
 
-如果push 成功，结果如下
+If the server pushes to the client successfully, the result is as follows:
 
 ![tars](images/tars_result.PNG)
 
