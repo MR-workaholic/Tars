@@ -1,7 +1,7 @@
 ﻿# The push function of the Tars
 
-# Table of contents
-> * [1.The environment and the background] 
+# Contents
+> * [1.Background] 
 > * [2.Flow chart of the push mode]
 > * [3.Implement server-to-client push mode in Tars] 
 > * [4.Server function implementation] 
@@ -9,9 +9,9 @@
 > * [6.Test results] 
 
 
-## The environment and the background
+## Background
 
-In the actual application scenario, other server-to-client push modes need to be supported in the TARS service framework.
+In the actual application scenario, server-to-client push modes need to be supported in the TARS service framework.
 
 For example, see cpp/examples/pushDemo/.
 
@@ -20,17 +20,17 @@ Here's a flow chart of the push mode
 
 ![tars](images/tars_flow.PNG)
 
-- The black line represents the data flow : Data(client) -〉 Request packet encoder(client) -〉 Protocol parser(server) -〉 doRequest Protocol processor(server) -〉 Return data generation(server) -〉 Response packet decoder(client) -〉 Response Data (client)
+- The black line represents the data flow : data(client) -〉 request packet encoder(client) -〉 protocol parser(server) -〉 doRequest protocol processor(server) -〉 return data generation(server) -〉 response packet decoder(client) -〉 response data (client)
 - The yellow line represents the client access server
 - The blue line represents the server pushing the message to the client.
-- The **request packet encoder**(client)  is responsible for packaging and encoding the data sent by the client. The **protocol parser**(server) is responsible for unpacking the received data and handing it over to *.
+- The **request packet encoder**(client)  is responsible for packaging and encoding the data sent by the client. The **protocol parser**(server) is responsible for unpacking the received data and handing it over to **protocol processor**(server).
 - The **protocol processor**(server) processes and generates the return data, while the **response packet decoder**(client) is responsible for decoding the returned data.
 
 ## Implement server-to-client push mode in Tars:
 
-- For the server side, first, the server needs to implement the protocol parser with the development of the third-party protocol mode (that is, the non-TARS protocol) in accordance and load it into the service. Then server need to establish a non-TARS framework service object, which inherits from the Servant class of the Tars framework, and establishes the protocol processor between the client and the server by overloading the doRequest method in the Servant class. The client information connected to the server is then saved in the method, so that the server can push the message to the client. Finally, the doClose method in the Servant class needs to be reloaded. After the server knows that the client closes the connection, the client information saved in the doRequest method is released, so that the server does not need to push the message to the client. In addition, the server needs to establish a thread dedicated to push messages to the client.
+- For the server, first, the server needs to implement the protocol parser according to the mode of developing the third-party protocol (that is, the non-TARS protocol) and load it into the service. Then server need to establish a non-TARS service object, which inherits from the Servant class of the Tars framework, and establishes the protocol processor between the client and the server by overloading the doRequest method in the Servant class. The information of the client, who connected to the server, is saved in the method, so that the server can push the message to the client according to that information. Finally, the doClose method in the Servant class needs to be reloaded. After the server knows that the client closes the connection, the client's information saved in the doRequest method is released, so that the server does not need to push the message to the disconnected client. In addition, the server needs to establish a thread dedicated to push messages to the client.
 
-- Corresponding to the client, the codec function of the protocol packet is implemented according to the mode of the third-party protocol, and it is set to the protocol parser of the corresponding ServantProxy proxy, and implemented by the tars_set_protocol method of the ServantProxy class. Then you need to customize a callback class that inherits the ServantProxyCallback class. (Because the client receives the message from the server in an asynchronous manner, the client processes the message in an asynchronous manner.) At the same time, you need to override the onDispatch method. In this method, the protocol defined between the client and the server is parsed. Finally, you need a new callback class described above, and then pass it as a parameter to the tars_set_push_callback method of ServantProxy. In addition, the client needs to periodically send a message to the server (equivalent to a heartbeat packet) to tell the server that the client is alive. This is done because the server does not receive a message from the client within a certain period of time and automatically closes the connection between them. It is important to note that before the server interacts with the client push mode, the client needs to access the service by calling the rpc related function of the ServantProxy class.
+- For the client, the codec function of the protocol packet is implemented according to the mode of developing the third-party protocol, and it is set to the protocol parser of the corresponding ServantProxy proxy, and implemented by the `tars_set_protocol()` method of the `ServantProxy` class. Then you need to customize a callback class that inherits the `ServantProxyCallback` class. (Because the client receives the message from the server in an asynchronous manner, the client processes the message in an asynchronous manner.) At the same time, you need to override the `onDispatch()` method. In this method, the protocol defined between the client and the server is parsed. Finally, you need to create an instance of the callback class described above, and then pass it as a parameter to the `tars_set_push_callback()` method of `ServantProxy` class. In addition, the client needs to periodically send a message to the server (equivalent to a heartbeat packet) to tell the server that the client is alive. This is done because the server does not receive a message from the client within a certain period of time and automatically closes the connection between them. Before the server interacts with the client in push mode, the client needs to access the service by calling the rpc related function of the ServantProxy class.
 
 ## Server function implementation
 
@@ -42,9 +42,9 @@ Deploy a server on the management platform as shown below
 
 Refer to the code that Tars supports third-party protocols:
 
-- The initialize() of the TestPushServer class loads the service object TestPushServantImp and sets a third-party protocol parser. The parser does not do any processing, and passes the received data packet to the service object for processing.But usually, the data is parsed before being handed over to the service object for processing.
-- TestPushServantImp overrides the doRequest method that inherits from the Servant class, which is a protocol processor for third-party services. The processor is responsible for processing the data passed to it by the protocol parser and is responsible for generating the response returned to the client（This service is an echo service, so the response is directly equal to the received packet）. At the same time, the server will save the information state of the client, so that the pushThread thread can push the message to the client.
-- In addition, TestPushServantImp overrides the doClose method that inherits from the Servant class, and is used to clear the saved related customer information after the client closes the connection or the connection times out.
+- The `initialize()` of the `TestPushServer` class loads the service object `TestPushServantImp` and sets a third-party protocol `parser`. The `parser` does not do any processing, and passes the received data packet to the service object for processing. But usually, the data is parsed before being handed over to the service object for processing.
+- `TestPushServantImp` overrides the `doRequest()` method that inherits from the `Servant` class, which is a protocol processor for third-party services. The processor is responsible for processing the data passed to it by the protocol parser and is responsible for generating the response returned to the client（This service is an echo service, so the response is directly equal to the received packet）. At the same time, the server will save the information state of the client, so that the `pushThread` thread can push the message to the client.
+- In addition, `TestPushServantImp` overrides the `doClose()` method that inherits from the `Servant` class, and is used to clear the saved related customer information after the client closes the connection or the connection times out.
 
 
 ### Server-implemented code
@@ -395,13 +395,13 @@ main(int argc, char* argv[])
 ## Client function implementation
 
 ### Client Implementation Overview
-This section describes how the client accesses the server through the proxy. The specific steps are as follows:
+This section describes how the client accesses the server through the proxy mode. The specific steps are as follows:
 - The client first establishes a communicator (Communicator _comm) and obtains a proxy through the communicator. The code is as follows:
 
  ```cpp
   string sObjName = "Test.TestPushServer.TestPushServantObj";
   string sObjHost = "tcp -h 10.120.129.226 -t 60000 -p 10099";
-	_prx = _comm.stringToProxy<ServantPrx>(sObjName+"@"+sObjHost);
+  _prx = _comm.stringToProxy<ServantPrx>(sObjName+"@"+sObjHost);
 ```
 -  Write and set the request packet encoder and response packet decoder for the proxy. The code is as follows:
   ```
