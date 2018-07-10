@@ -1,56 +1,56 @@
-﻿# Table of Contents
+﻿# Contents
 > * Overview
-> * Tars C++ framework service thread composition
-> * Analyze the tasks of each thread in the run
+> * Service thread type of Tars(C++) service
+> * Analyzing the tasks of running threads
 > * Method of changing the number of threads
 
 # 1. Overview
 
-The Tars C++ framework service is a single-process, multi-threaded RPC system. This article describes the number of threads that a standard Tars C++ framework service starts, and the responsibilities of each thread.
+The Tars(C++) service is a single-process, multi-threaded RPC system. This article describes the number of threads that a standard Tars(C++) service starts, and the responsibilities of each thread.
 
-# 2. Tars C++ framework service thread composition
+# 2. Service thread type of Tars(C++) service
 
 Starter |Thread function|Number of threads
 ------|--------|-----
-SERVER |Service main thread, responsible for server initialization|1
-SERVER|Server network thread, responsible for sending and receiving data packets on the server network (the number of threads is configurable)|Configurable
-SERVER|The thread that manages the port business logic, responsible for accepting and processing user-defined commands, service shutdown commands, etc.|1
-SERVER|Time-assisted thread, responsible for periodically calculating time and reducing system calls to gettimeofday|1
-SERVER|The thread that scrolls the log, responsible for local log file creation and log writing|1
-SERVER|Local log thread, responsible for file creation and log writing of local dyed logs (this thread will be created if there is a set print by day log or related initialization)|1
-SERVER|Remote log thread, responsible for synchronizing the local dyed log to the remote end (this thread will be created if there is a set print by day log or related initialization)|1
-SERVER|The thread of business logic processing is responsible for processing user business logic and completing the main functions of the RPC service. (Default, each ServantObj has its own business logic processing thread, but can also share the business logic processing thread)|Configurable
-Communicator|Client network thread, responsible for managing external service connections, listening for read and write events, and completing network read and write|Configurable
-Communicator|The thread that reports the attribute is responsible for collecting statistics and attribute information, and timing synchronization to stat and property.|1
+SERVER |Server main thread, responsible for server initialization|1
+SERVER|Server network thread, responsible for sending and receiving data packets on the server (the number of threads is configurable)|Configurable
+SERVER|Server-side thread that listens on the port to run business logic, responsible for accepting and processing user-defined commands, service shutdown commands, etc.|1
+SERVER|Thread that assists the user in getting time, responsible for periodically calculating time and reducing system calls to gettimeofday|1
+SERVER|Thread used to scroll the log, responsible for local log file creation and log writing|1
+SERVER|Local log thread, responsible for file creation and log writing of local dyed logs (This thread will start if there is a daily print log or related initialization.)|1
+SERVER|Remote log thread, responsible for synchronizing the local dyed log to the remote (This thread will start if there is a daily print log or related initialization.)|1
+SERVER|Business processing thread, responsible for processing user business logic and completing the main functions of the RPC service. (Each ServantObj has its own business processing threads by default, but the business processing threads can also be shared.)|Configurable
+Communicator|Client network thread, responsible for managing socket connections, listening for read and write events, and completing network read and write|Configurable
+Communicator|Thread for statistical attribute reporting, responsible for collecting statistics and attribute information, and timing synchronization to stat and property.|1
 Communicator|Asynchronous callback thread, responsible for executing asynchronous callback function, each network thread of the client has its own asynchronous thread|Configurable
 
-# 3. Analyze the tasks of each thread in the run
+# 3. Analyzing the tasks of running threads
 
-We look at a running Tars framework service application, look at the characteristics of each thread, and distinguish between the various thread functions.
+From a running Tars service application, we look at the characteristics of each thread and make a distinction between the various thread functions.
 
-Experimental scenario:
+Experimental scene:
 
-> * The server is configured with one ServantObj, which is configured with five business logic threads.
+> * The server is configured with one ServantObj, which is configured with five business processing threads.
 
 > * The server is configured with one network thread.
 
-> * The client is configured with two network thread.
+> * The communicator is configured with two network threads.
 
-> * The client is configured with two asynchronous callback thread.
+> * The communicator is configured with two asynchronous callback thread.
 
 According to the thread startup configuration described above, this service should have:
 
-7(fixed) + 1(Number of server network threads) + 5(Number of business processing threads) + 2(Number of client network threads) + 2(Number of asynchronous callback threads) * 2(Number of client network threads) = 19 threads.
+7(fixed) + 1(Number of server's network threads) + 5(Number of business processing threads) + 2(Number of communicator's network threads) + 2(Number of communicator's asynchronous callback threads) * 2(Number of communicator's network threads) = 19 threads.
 
 # 4. Method of changing the number of threads
 
-The above shows which thread is composed of a standard Tars C++ service application. Any thread that indicates a number of 1 is implemented internally by the framework, and the user cannot change its number.
+The above shows which thread is composed of a standard Tars(C++) service application. Any thread that indicates a number of 1 is implemented internally by the Tars(C++), and the user cannot change its number.
 
-The number of threads that can be changed are server network threads, business processing threads, client network threads, and asynchronous callback processing threads.
+The number of threads that can be changed are server's network threads, business processing threads, communicator's network threads, and communicator's asynchronous callback threads.
 
 ## 4.1. Method of changing the number of business processing threads
 
-If you want to change the number of business processing threads of a certain servant object on the server, you can fill in the number N in the "Number of threads" column when the servant object is configured on the Tars management platform, then the framework will start N business processing threads for the servant.
+If you want to change the number of business processing threads of a certain servant object on the server, you can fill in the number N in the "Number of threads" column when the servant object is configured on the Tars management platform, then the Tars(C++) service application will start N business processing threads for the servant.
 
 
 Note:
@@ -68,6 +68,6 @@ ServantB and ServantC belong to the business processing thread group HandleGroup
 Then the total number of business processing threads should be: 10 + 10
 
 
-## 4.2. Method for changing server network thread, client network thread, and asynchronous callback processing thread
+## 4.2. Method for changing server's network thread, communicator's network thread, and asynchronous callback processing thread
 
-If you want to change the number of server network threads, client network threads, and asynchronous callback threads, you can modify them on the template or add the corresponding service private template.
+If you want to change the number of server's network threads, communicator's network threads, and asynchronous callback threads, you can modify them on the template or add the corresponding service's private template.
